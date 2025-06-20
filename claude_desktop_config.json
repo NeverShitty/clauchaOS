@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "cloudflare": {
+      "command": "node",
+      "args": ["/home/runner/workspace/mcp-cloudflare/dist/index.js"],
+      "env": {
+        "CLOUDFLARE_GLOBAL_API_KEY": "your-key-here",
+        "CLOUDFLARE_EMAIL": "your-email@example.com"
+      }
+    }
+  }
+}

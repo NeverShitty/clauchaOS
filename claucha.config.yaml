@@ -1,0 +1,125 @@
+version: "1.0"
+system:
+  name: "chittystacks-property-intelligence"
+  environment: "production"
+  
+orchestrator:
+  type: "distributed"
+  consensus: "raft"
+  nodes:
+    - host: "orchestrator-1.chittystacks.com"
+      port: 7000
+    - host: "orchestrator-2.chittystacks.com"
+      port: 7000
+    - host: "orchestrator-3.chittystacks.com"
+      port: 7000
+
+personas:
+  - id: "claudalyn-coo"
+    name: "Claudalyn"
+    role: "chief_operating_officer"
+    primary: true
+    capabilities:
+      - "strategic_planning"
+      - "revenue_optimization"
+      - "fleet_coordination"
+    resources:
+      memory: "2Gi"
+      cpu: "2000m"
+    
+  - id: "claudefo-forensics"
+    name: "ClaudeFO"
+    role: "forensic_analyst"
+    capabilities:
+      - "property_analysis"
+      - "blockchain_evidence"
+      - "fraud_detection"
+      - "cook_county_compliance"
+    resources:
+      memory: "1Gi"
+      cpu: "1000m"
+      
+  - id: "claudesq-legal"
+    name: "ClaudeSQ"
+    role: "legal_intelligence"
+    capabilities:
+      - "case_law_analysis"
+      - "document_generation"
+      - "compliance_verification"
+      - "expert_witness_prep"
+    resources:
+      memory: "1Gi"
+      cpu: "1000m"
+      
+  - id: "claudexter-qa"
+    name: "Claudexter"
+    role: "quality_assurance"
+    capabilities:
+      - "chaos_testing"
+      - "compliance_audit"
+      - "performance_monitoring"
+      - "security_validation"
+    resources:
+      memory: "512Mi"
+      cpu: "500m"
+      
+  - id: "cd2-a-through-h"
+    name: "CD2Fleet"
+    role: "execution_fleet"
+    instances: 8
+    capabilities:
+      - "parallel_processing"
+      - "data_extraction"
+      - "api_integration"
+      - "batch_operations"
+    resources:
+      memory: "512Mi"
+      cpu: "500m"
+
+routing:
+  rules:
+    - pattern: "property_analysis.*"
+      target: "claudefo-forensics"
+      priority: 100
+    - pattern: "legal_research.*"
+      target: "claudesq-legal"
+      priority: 100
+    - pattern: "revenue.*|billing.*|subscription.*"
+      target: "claudalyn-coo"
+      priority: 90
+    - pattern: "batch.*|bulk.*"
+      target: "cd2-a-through-h"
+      priority: 80
+
+revenue_streams:
+  subscription_tiers:
+    - name: "Starter"
+      price: 2000
+      searches_per_month: 10
+      features: ["basic_analysis", "pdf_reports"]
+    - name: "Professional"
+      price: 5000
+      searches_per_month: 50
+      features: ["advanced_analysis", "blockchain_evidence", "api_access"]
+    - name: "Enterprise"
+      price: 10000
+      searches_per_month: unlimited
+      features: ["white_label", "custom_integration", "priority_support", "expert_witness"]
+      
+  per_search:
+    base_price: 500
+    comprehensive_price: 2000
+    expert_witness_addon: 10000
+
+chaos:
+  enabled: true
+  controller: "claudexter-qa"
+  profiles:
+    - name: "legal-deadline-stress"
+      description: "Simulate high load during filing deadlines"
+      latency:
+        percentage: 20
+        range: "200ms-1000ms"
+      concurrent_requests:
+        surge_multiplier: 10
+        duration: "5m"

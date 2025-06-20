@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Memory System Data
+vector_memory_v3/
+insights_reports/
+*.backup
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+
+# API Keys and Secrets
+api_keys.json
+secrets.json
+*.key
+*.pem
+
+# Database
+*.db
+*.sqlite
+
+# Cache
+.cache/
+*.cache
+
+# Reports
+reports/
+*.pdf
+*.html
+
+# Jupyter
+.ipynb_checkpoints/
+EOF < /dev/null

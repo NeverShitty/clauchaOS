@@ -1,0 +1,10 @@
+{
+  "cloudflare": {
+    "command": "node",
+    "args": ["/Users/noshit/MCMANSION/executive_bathroom/claudalyn_office/mcp-cloudflare/dist/index.js"],
+    "env": {
+      "CLOUDFLARE_GLOBAL_API_KEY": "your-actual-cloudflare-api-key",
+      "CLOUDFLARE_EMAIL": "your-cloudflare-email@example.com"
+    }
+  }
+}

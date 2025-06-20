@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run check:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(env)",
+      "Bash(cat:*)",
+      "Bash(npm search:*)",
+      "Bash(npm install:*)",
+      "Bash(unzip:*)",
+      "Bash(chmod:*)",
+      "Bash(./op:*)",
+      "Bash(wget:*)",
+      "Bash(python3:*)",
+      "Bash(printenv)",
+      "Bash(printenv:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(tar:*)",
+      "Bash(grep:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(whois:*)",
+      "Bash(echo:*)",
+      "Bash(ssh:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": []
+  }
+}

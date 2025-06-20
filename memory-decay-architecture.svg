@@ -1,0 +1,128 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-size="24" font-weight="bold" fill="#333">
+    Claude Memory System with Purposeful Decay
+  </text>
+  
+  <!-- Main container -->
+  <rect x="20" y="50" width="760" height="530" fill="none" stroke="#333" stroke-width="2" rx="10"/>
+  
+  <!-- Input Layer -->
+  <g transform="translate(50, 80)">
+    <rect x="0" y="0" width="150" height="60" fill="#4ECDC4" rx="5"/>
+    <text x="75" y="30" text-anchor="middle" font-weight="bold" fill="white">Memory Input</text>
+    <text x="75" y="50" text-anchor="middle" font-size="12" fill="white">Content + Context</text>
+  </g>
+  
+  <!-- TMUX Context -->
+  <g transform="translate(250, 80)">
+    <rect x="0" y="0" width="150" height="60" fill="#FFD93D" rx="5"/>
+    <text x="75" y="25" text-anchor="middle" font-weight="bold">TMUX Context</text>
+    <text x="75" y="45" text-anchor="middle" font-size="12">Session/Window</text>
+    <text x="75" y="60" text-anchor="middle" font-size="10" fill="#666">legal-research:contracts</text>
+  </g>
+  
+  <!-- Squeaky Level -->
+  <g transform="translate(450, 80)">
+    <rect x="0" y="0" width="150" height="60" fill="#6C5CE7" rx="5"/>
+    <text x="75" y="25" text-anchor="middle" font-weight="bold" fill="white">Squeaky Level</text>
+    <text x="75" y="45" text-anchor="middle" font-size="12" fill="white">LOUD/MEDIUM/QUIET</text>
+    <text x="75" y="60" text-anchor="middle" font-size="10" fill="#DDD">Current: MEDIUM</text>
+  </g>
+  
+  <!-- Decay Engine -->
+  <g transform="translate(200, 180)">
+    <rect x="0" y="0" width="400" height="100" fill="#FF6B6B" fill-opacity="0.1" stroke="#FF6B6B" stroke-width="2" rx="5"/>
+    <text x="200" y="25" text-anchor="middle" font-size="18" font-weight="bold" fill="#FF6B6B">Decay Classification Engine</text>
+    
+    <!-- Decay types -->
+    <g transform="translate(20, 40)">
+      <rect x="0" y="0" width="80" height="30" fill="#FF6B6B" rx="3"/>
+      <text x="40" y="20" text-anchor="middle" font-size="11" fill="white">Ephemeral (7d)</text>
+    </g>
+    <g transform="translate(110, 40)">
+      <rect x="0" y="0" width="80" height="30" fill="#FFA502" rx="3"/>
+      <text x="40" y="20" text-anchor="middle" font-size="11" fill="white">Working (30d)</text>
+    </g>
+    <g transform="translate(200, 40)">
+      <rect x="0" y="0" width="80" height="30" fill="#3742FA" rx="3"/>
+      <text x="40" y="20" text-anchor="middle" font-size="11" fill="white">Seasonal (90d)</text>
+    </g>
+    <g transform="translate(290, 40)">
+      <rect x="0" y="0" width="80" height="30" fill="#2ED573" rx="3"/>
+      <text x="40" y="20" text-anchor="middle" font-size="11" fill="white">Permanent (∞)</text>
+    </g>
+  </g>
+  
+  <!-- Storage Layer -->
+  <g transform="translate(50, 320)">
+    <!-- Local Vector Store -->
+    <rect x="0" y="0" width="200" height="120" fill="#5F27CD" fill-opacity="0.1" stroke="#5F27CD" stroke-width="2" rx="5"/>
+    <text x="100" y="25" text-anchor="middle" font-weight="bold" fill="#5F27CD">Local Vector Store</text>
+    <text x="100" y="45" text-anchor="middle" font-size="12">• OpenAI Embeddings</text>
+    <text x="100" y="60" text-anchor="middle" font-size="12">• Decay Metadata</text>
+    <text x="100" y="75" text-anchor="middle" font-size="12">• TMUX Context</text>
+    <text x="100" y="90" text-anchor="middle" font-size="12">• Access Tracking</text>
+    <text x="100" y="110" text-anchor="middle" font-size="10" fill="#666">~1.5KB per memory</text>
+  </g>
+  
+  <!-- OpenAI Threads -->
+  <g transform="translate(300, 320)">
+    <rect x="0" y="0" width="200" height="120" fill="#00D2D3" fill-opacity="0.1" stroke="#00D2D3" stroke-width="2" rx="5"/>
+    <text x="100" y="25" text-anchor="middle" font-weight="bold" fill="#00D2D3">OpenAI Threads</text>
+    <text x="100" y="45" text-anchor="middle" font-size="12">• Persistent Storage</text>
+    <text x="100" y="60" text-anchor="middle" font-size="12">• Conversation History</text>
+    <text x="100" y="75" text-anchor="middle" font-size="12">• Instance Threads</text>
+    <text x="100" y="90" text-anchor="middle" font-size="12">• Cloud Backup</text>
+    <text x="100" y="110" text-anchor="middle" font-size="10" fill="#666">Unlimited capacity</text>
+  </g>
+  
+  <!-- Broadcast Hub -->
+  <g transform="translate(550, 320)">
+    <rect x="0" y="0" width="200" height="120" fill="#FF9FF3" fill-opacity="0.1" stroke="#FF9FF3" stroke-width="2" rx="5"/>
+    <text x="100" y="25" text-anchor="middle" font-weight="bold" fill="#FF9FF3">Broadcast Hub</text>
+    <text x="100" y="45" text-anchor="middle" font-size="12">• 11 Local Instances</text>
+    <text x="100" y="60" text-anchor="middle" font-size="12">• 6 Replit Instances</text>
+    <text x="100" y="75" text-anchor="middle" font-size="12">• Real-time Sync</text>
+    <text x="100" y="90" text-anchor="middle" font-size="12">• Decay Aware</text>
+    <text x="100" y="110" text-anchor="middle" font-size="10" fill="#666">&lt;5s propagation</text>
+  </g>
+  
+  <!-- Pruning Process -->
+  <g transform="translate(200, 480)">
+    <rect x="0" y="0" width="400" height="80" fill="#EE5A24" fill-opacity="0.1" stroke="#EE5A24" stroke-width="2" rx="5" stroke-dasharray="5,5"/>
+    <text x="200" y="25" text-anchor="middle" font-weight="bold" fill="#EE5A24">Automated Pruning (Hourly)</text>
+    <text x="200" y="45" text-anchor="middle" font-size="12">✓ Check expiry dates → ✓ Apply squeaky rules → ✓ Preserve important → ✗ Prune expired</text>
+    <text x="200" y="65" text-anchor="middle" font-size="10" fill="#666">Logs: decay_log.json | Backup: pre-prune snapshot</text>
+  </g>
+  
+  <!-- Arrows showing flow -->
+  <!-- Input to Decay Engine -->
+  <path d="M 125 140 L 300 180" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 325 140 L 350 180" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 525 140 L 450 180" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Decay Engine to Storage -->
+  <path d="M 300 280 L 150 320" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 400 280 L 400 320" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 500 280 L 650 320" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Storage to Pruning -->
+  <path d="M 150 440 L 250 480" stroke="#EE5A24" stroke-width="2" marker-end="url(#arrowhead-red)" stroke-dasharray="3,3"/>
+  <path d="M 400 440 L 400 480" stroke="#EE5A24" stroke-width="2" marker-end="url(#arrowhead-red)" stroke-dasharray="3,3"/>
+  
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#EE5A24"/>
+    </marker>
+  </defs>
+  
+  <!-- Legend -->
+  <g transform="translate(30, 570)">
+    <text x="0" y="0" font-size="10" fill="#666">TTL: Time To Live | ∞: Never expires | Squeaky levels control preservation aggressiveness</text>
+  </g>
+</svg>

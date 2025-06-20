@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Trust Chain Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Matrix rain effect */
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto repeat(3, 1fr);
+            gap: 10px;
+            height: 100vh;
+            padding: 10px;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #0f0;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #0f0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Panels */
+        .panel {
+            background: rgba(0, 20, 0, 0.9);
+            border: 1px solid #0f0;
+            padding: 15px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .panel h2 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff;
+        }
+
+        /* Trust Scores Panel */
+        .trust-score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(0, 50, 0, 0.5);
+            border-left: 3px solid #0f0;
+            transition: all 0.3s;
+        }
+
+        .trust-score-item:hover {
+            background: rgba(0, 80, 0, 0.7);
+            transform: translateX(5px);
+        }
+
+        .trust-bar {
+            width: 100px;
+            height: 20px;
+            background: #111;
+            border: 1px solid #0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trust-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .trust-high { background: #0f0; }
+        .trust-medium { background: #ff0; }
+        .trust-low { background: #f00; }
+
+        /* Approval Queue */
+        .approval-item {
+            background: rgba(50, 0, 0, 0.7);
+            border: 1px solid #f00;
+            padding: 10px;
+            margin-bottom: 10px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { border-color: #f00; }
+            50% { border-color: #ff0; }
+        }
+
+        .approval-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #0f0;
+            background: transparent;
+            color: #0f0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 10px #0f0;
+        }
+
+        .btn-deny {
+            border-color: #f00;
+            color: #f00;
+        }
+
+        .btn-deny:hover {
+            background: #f00;
+            box-shadow: 0 0 10px #f00;
+        }
+
+        /* Chain Activity */
+        .chain-block {
+            background: rgba(0, 0, 50, 0.5);
+            border: 1px solid #00f;
+            padding: 10px;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .event-positive { color: #0f0; }
+        .event-negative { color: #f00; }
+        .event-neutral { color: #ff0; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: rgba(0, 50, 50, 0.3);
+            border: 1px solid #0ff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        /* Permission Matrix */
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .permission-level {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #0f0;
+            font-size: 0.8em;
+        }
+
+        .level-full { background: rgba(0, 255, 0, 0.2); }
+        .level-supervised { background: rgba(255, 255, 0, 0.2); }
+        .level-approval { background: rgba(255, 128, 0, 0.2); }
+        .level-limited { background: rgba(255, 0, 0, 0.2); }
+        .level-quarantined { 
+            background: rgba(255, 0, 0, 0.4); 
+            animation: danger-pulse 1s infinite;
+        }
+
+        @keyframes danger-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Blockchain Visualization */
+        .blockchain-viz {
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        .block-viz {
+            min-width: 80px;
+            height: 60px;
+            background: rgba(0, 100, 0, 0.8);
+            border: 2px solid #0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-right: 30px;
+        }
+
+        .block-viz::after {
+            content: '→';
+            position: absolute;
+            right: -25px;
+            color: #0f0;
+            font-size: 20px;
+        }
+
+        .block-viz:last-child::after {
+            display: none;
+        }
+
+        /* Alert System */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 0, 0, 0.9);
+            border: 2px solid #f00;
+            padding: 20px;
+            color: #fff;
+            display: none;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #0f0;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Integrity Status */
+        .integrity-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border: 1px solid #0f0;
+            background: rgba(0, 255, 0, 0.1);
+            font-size: 0.8em;
+        }
+
+        .integrity-valid { border-color: #0f0; color: #0f0; }
+        .integrity-invalid { 
+            border-color: #f00; 
+            color: #f00; 
+            animation: blink 0.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-bg"></canvas>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔗 CLAUDE TRUST CHAIN</h1>
+            <div class="integrity-status integrity-valid">
+                CHAIN INTEGRITY: VALID ✓
+            </div>
+            <p>Every approval, every action, immutably logged</p>
+        </div>
+
+        <!-- Claude Trust Scores -->
+        <div class="panel">
+            <h2>CLAUDE TRUST SCORES</h2>
+            <div id="trustScores">
+                <div class="trust-score-item">
+                    <span>claude_001</span>
+                    <div class="trust-bar">
+                        <div class="trust-fill trust-high" style="width: 85%"></div>
+                    </div>
+                    <span>85.0</span>
+                </div>
+                <div class="trust-score-item">
+                    <span>claude_002</span>
+                    <div class="trust-bar">
+                        <div class="trust-fill trust-medium" style="width: 65%"></div>
+                    </div>
+                    <span>65.0</span>
+                </div>
+                <div class="trust-score-item">
+                    <span>claude_003</span>
+                    <div class="trust-bar">
+                        <div class="trust-fill trust-low" style="width: 25%"></div>
+                    </div>
+                    <span>25.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Queue -->
+        <div class="panel">
+            <h2>⚠️ PENDING APPROVALS</h2>
+            <div id="approvalQueue">
+                <div class="approval-item">
+                    <strong>claude_002</strong> requests permission for:
+                    <br><em>process_payments</em>
+                    <br>Amount: $500.00
+                    <br>Risk Level: HIGH
+                    <div class="approval-buttons">
+                        <button class="btn" onclick="approveAction(1)">APPROVE</button>
+                        <button class="btn btn-deny" onclick="denyAction(1)">DENY</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chain Activity -->
+        <div class="panel">
+            <h2>⛓️ RECENT CHAIN ACTIVITY</h2>
+            <div id="chainActivity">
+                <div class="chain-block">
+                    <small>Block #42 | 2024-01-20 15:30:45</small>
+                    <div class="event-positive">✓ claude_001: Task completed</div>
+                    <div class="event-positive">💰 Revenue: $1,500</div>
+                </div>
+                <div class="chain-block">
+                    <small>Block #41 | 2024-01-20 15:25:12</small>
+                    <div class="event-negative">✗ claude_003: Compliance violation</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Stats -->
+        <div class="panel">
+            <h2>📊 SYSTEM STATISTICS</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">156</div>
+                    <div class="stat-label">Total Blocks</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">94.3%</div>
+                    <div class="stat-label">Avg Success Rate</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">$45,230</div>
+                    <div class="stat-label">Revenue Generated</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Active Claudes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permission Levels -->
+        <div class="panel">
+            <h2>🔐 PERMISSION MATRIX</h2>
+            <div class="permission-grid">
+                <div class="permission-level level-full">
+                    FULL AUTO<br>
+                    <small>90+ Trust</small>
+                </div>
+                <div class="permission-level level-supervised">
+                    SUPERVISED<br>
+                    <small>70-89 Trust</small>
+                </div>
+                <div class="permission-level level-approval">
+                    APPROVAL REQ<br>
+                    <small>50-69 Trust</small>
+                </div>
+                <div class="permission-level level-limited">
+                    LIMITED<br>
+                    <small>30-49 Trust</small>
+                </div>
+                <div class="permission-level level-quarantined">
+                    QUARANTINED<br>
+                    <small>&lt;30 Trust</small>
+                </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8em; color: #888;">
+                High-risk actions always require approval below 70 trust
+            </div>
+        </div>
+
+        <!-- Blockchain Visualization -->
+        <div class="panel">
+            <h2>🔗 BLOCKCHAIN VISUALIZATION</h2>
+            <div class="blockchain-viz">
+                <div class="block-viz">
+                    <small>#0<br>Genesis</small>
+                </div>
+                <div class="block-viz">
+                    <small>#1<br>Init</small>
+                </div>
+                <div class="block-viz">
+                    <small>#2<br>Tasks</small>
+                </div>
+                <div class="block-viz">
+                    <small>#3<br>Revenue</small>
+                </div>
+                <div class="block-viz" style="border-color: #ff0; box-shadow: 0 0 10px #ff0;">
+                    <small>#4<br>Mining...</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trust History Chart -->
+        <div class="panel">
+            <h2>📈 TRUST EVOLUTION</h2>
+            <canvas id="trustChart" width="300" height="150"></canvas>
+        </div>
+
+        <!-- Human Override -->
+        <div class="panel">
+            <h2>👤 HUMAN OVERRIDE</h2>
+            <p style="margin-bottom: 10px; font-size: 0.9em;">
+                Emergency controls for trust management
+            </p>
+            <select id="claudeSelect" class="btn" style="width: 100%; margin-bottom: 10px;">
+                <option>claude_001</option>
+                <option>claude_002</option>
+                <option>claude_003</option>
+            </select>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="boostTrust()">BOOST +10</button>
+                <button class="btn btn-deny" onclick="penalizeTrust()">PENALIZE -20</button>
+            </div>
+            <button class="btn btn-deny" style="width: 100%; margin-top: 10px;" onclick="quarantineClaude()">
+                🚨 QUARANTINE
+            </button>
+        </div>
+
+        <!-- Audit Export -->
+        <div class="panel">
+            <h2>📋 AUDIT & COMPLIANCE</h2>
+            <p style="margin-bottom: 10px; font-size: 0.9em;">
+                Export immutable audit trail for legal compliance
+            </p>
+            <button class="btn" onclick="exportAudit()" style="width: 100%; margin-bottom: 10px;">
+                EXPORT FULL AUDIT
+            </button>
+            <button class="btn" onclick="verifyIntegrity()" style="width: 100%;">
+                VERIFY CHAIN INTEGRITY
+            </button>
+            <div id="auditStatus" style="margin-top: 10px; font-size: 0.8em; color: #0f0;">
+                Last audit: 2024-01-20 15:45:00
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert System -->
+    <div class="alert" id="alertBox">
+        <strong>⚠️ ALERT</strong>
+        <p id="alertMessage"></p>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        const matrix = "TRUSTCHAINAPPROVAL01";
+        const matrixArray = matrix.split("");
+        
+        const fontSize = 10;
+        const columns = canvas.width / fontSize;
+        
+        const drops = [];
+        for(let x = 0; x < columns; x++) {
+            drops[x] = 1;
+        }
+        
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px monospace';
+            
+            for(let i = 0; i < drops.length; i++) {
+                const text = matrixArray[Math.floor(Math.random() * matrixArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                
+                if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        
+        setInterval(drawMatrix, 35);
+
+        // Trust Chart
+        const trustCanvas = document.getElementById('trustChart');
+        const trustCtx = trustCanvas.getContext('2d');
+        
+        function drawTrustChart() {
+            trustCtx.clearRect(0, 0, trustCanvas.width, trustCanvas.height);
+            
+            // Draw grid
+            trustCtx.strokeStyle = '#0f0';
+            trustCtx.lineWidth = 0.5;
+            trustCtx.globalAlpha = 0.3;
+            
+            for(let i = 0; i < 5; i++) {
+                const y = (i / 4) * trustCanvas.height;
+                trustCtx.beginPath();
+                trustCtx.moveTo(0, y);
+                trustCtx.lineTo(trustCanvas.width, y);
+                trustCtx.stroke();
+            }
+            
+            trustCtx.globalAlpha = 1;
+            
+            // Simulate trust data
+            const data = [
+                {x: 0, y: 50},
+                {x: 50, y: 55},
+                {x: 100, y: 65},
+                {x: 150, y: 70},
+                {x: 200, y: 68},
+                {x: 250, y: 75},
+                {x: 300, y: 85}
+            ];
+            
+            // Draw line
+            trustCtx.strokeStyle = '#0f0';
+            trustCtx.lineWidth = 2;
+            trustCtx.beginPath();
+            
+            data.forEach((point, index) => {
+                const x = point.x;
+                const y = trustCanvas.height - (point.y / 100) * trustCanvas.height;
+                
+                if(index === 0) {
+                    trustCtx.moveTo(x, y);
+                } else {
+                    trustCtx.lineTo(x, y);
+                }
+            });
+            
+            trustCtx.stroke();
+            
+            // Draw points
+            data.forEach(point => {
+                const x = point.x;
+                const y = trustCanvas.height - (point.y / 100) * trustCanvas.height;
+                
+                trustCtx.fillStyle = '#0f0';
+                trustCtx.beginPath();
+                trustCtx.arc(x, y, 3, 0, Math.PI * 2);
+                trustCtx.fill();
+            });
+        }
+        
+        drawTrustChart();
+
+        // Interactive Functions
+        function approveAction(id) {
+            showAlert('Action approved! Trust score increased.', 'success');
+            // In real implementation, this would call the API
+            setTimeout(() => {
+                document.querySelector('.approval-item').style.display = 'none';
+            }, 500);
+        }
+
+        function denyAction(id) {
+            showAlert('Action denied. Trust score decreased.', 'warning');
+            setTimeout(() => {
+                document.querySelector('.approval-item').style.display = 'none';
+            }, 500);
+        }
+
+        function boostTrust() {
+            const claude = document.getElementById('claudeSelect').value;
+            showAlert(`Boosted trust for ${claude} by +10`, 'success');
+        }
+
+        function penalizeTrust() {
+            const claude = document.getElementById('claudeSelect').value;
+            showAlert(`Penalized trust for ${claude} by -20`, 'warning');
+        }
+
+        function quarantineClaude() {
+            const claude = document.getElementById('claudeSelect').value;
+            if(confirm(`Are you sure you want to quarantine ${claude}? This will require manual approval for ALL actions.`)) {
+                showAlert(`${claude} has been quarantined!`, 'danger');
+            }
+        }
+
+        function exportAudit() {
+            showAlert('Exporting comprehensive audit trail...', 'info');
+            // Simulate download
+            setTimeout(() => {
+                showAlert('Audit trail exported: trust_chain_audit_20240120.txt', 'success');
+            }, 2000);
+        }
+
+        function verifyIntegrity() {
+            showAlert('Verifying blockchain integrity...', 'info');
+            // Simulate verification
+            setTimeout(() => {
+                document.querySelector('.integrity-status').textContent = 'CHAIN INTEGRITY: VALID ✓';
+                document.querySelector('.integrity-status').className = 'integrity-status integrity-valid';
+                showAlert('Chain integrity verified! All blocks valid.', 'success');
+            }, 1500);
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertBox = document.getElementById('alertBox');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            alertMessage.textContent = message;
+            alertBox.style.display = 'block';
+            
+            if(type === 'success') {
+                alertBox.style.borderColor = '#0f0';
+                alertBox.style.background = 'rgba(0, 255, 0, 0.9)';
+            } else if(type === 'warning') {
+                alertBox.style.borderColor = '#ff0';
+                alertBox.style.background = 'rgba(255, 255, 0, 0.9)';
+            } else if(type === 'danger') {
+                alertBox.style.borderColor = '#f00';
+                alertBox.style.background = 'rgba(255, 0, 0, 0.9)';
+            }
+            
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 3000);
+        }
+
+        // Simulate real-time updates
+        setInterval(() => {
+            // Update random trust score
+            const trustItems = document.querySelectorAll('.trust-score-item');
+            const randomItem = trustItems[Math.floor(Math.random() * trustItems.length)];
+            const currentScore = parseFloat(randomItem.querySelector('span:last-child').textContent);
+            const change = (Math.random() - 0.5) * 5;
+            const newScore = Math.max(0, Math.min(100, currentScore + change));
+            
+            randomItem.querySelector('span:last-child').textContent = newScore.toFixed(1);
+            const bar = randomItem.querySelector('.trust-fill');
+            bar.style.width = newScore + '%';
+            
+            // Update bar color
+            bar.className = 'trust-fill';
+            if(newScore >= 70) bar.classList.add('trust-high');
+            else if(newScore >= 40) bar.classList.add('trust-medium');
+            else bar.classList.add('trust-low');
+            
+            // Redraw trust chart
+            drawTrustChart();
+        }, 5000);
+
+        // WebSocket simulation for real-time updates
+        function simulateWebSocket() {
+            // In production, this would be a real WebSocket connection
+            console.log('Trust Chain Dashboard connected');
+        }
+
+        simulateWebSocket();
+    </script>
+</body>
+</html>

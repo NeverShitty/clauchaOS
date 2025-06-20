@@ -1,0 +1,520 @@
+# Legal Case Management System - Deployment Configuration
+# Production-ready Kubernetes deployment with Your County compliance
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legal-case-management
+  labels:
+    environment: production
+    compliance: cook-county-illinois
+
+---
+# Database Configuration
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: legal-postgres
+  namespace: legal-case-management
+spec:
+  instances: 3
+  primaryUpdateStrategy: unsupervised
+  
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"
+      effective_cache_size: "1GB"
+      work_mem: "4MB"
+      maintenance_work_mem: "64MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "16MB"
+      default_statistics_target: "100"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+    
+  bootstrap:
+    initdb:
+      database: legal_case_management
+      owner: legal_user
+      secret:
+        name: legal-postgres-credentials
+      
+  storage:
+    size: 100Gi
+    storageClass: fast-ssd
+    
+  monitoring:
+    enabled: true
+    
+  backup:
+    retention: "30d"
+    barmanObjectStore:
+      destinationPath: s3://chitty-legal-backups/postgres
+      s3Credentials:
+        accessKeyId:
+          name: s3-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: s3-credentials
+          key: SECRET_ACCESS_KEY
+      wal:
+        retention: "7d"
+      data:
+        retention: "30d"
+
+---
+# Redis for caching and session management
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legal-redis
+  namespace: legal-case-management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: legal-redis
+  template:
+    metadata:
+      labels:
+        app: legal-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: redis-config
+          mountPath: /usr/local/etc/redis/redis.conf
+          subPath: redis.conf
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+
+---
+# Main API Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legal-api
+  namespace: legal-case-management
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: legal-api
+  template:
+    metadata:
+      labels:
+        app: legal-api
+    spec:
+      containers:
+      - name: legal-api
+        image: chitty-stacks/legal-api:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: legal-postgres-credentials
+              key: uri
+        - name: REDIS_URL
+          value: "redis://legal-redis:6379"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-credentials
+              key: api-key
+        - name: VECTOR_STORE_PRIMARY
+          value: "your-vector-store-id"
+        - name: VECTOR_STORE_LLC
+          value: "your-vector-store-id"
+        - name: CLERK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: clerk-credentials
+              key: secret-key
+        - name: COOK_COUNTY_COMPLIANCE_MODE
+          value: "true"
+        - name: EVIDENCE_RETENTION_YEARS
+          value: "7"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Evidence Processing Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evidence-processor
+  namespace: legal-case-management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: evidence-processor
+  template:
+    metadata:
+      labels:
+        app: evidence-processor
+    spec:
+      containers:
+      - name: evidence-processor
+        image: chitty-stacks/evidence-processor:latest
+        env:
+        - name: IPFS_NODE_URL
+          value: "http://ipfs:5001"
+        - name: BLOCKCHAIN_RPC_URL
+          valueFrom:
+            secretKeyRef:
+              name: blockchain-credentials
+              key: rpc-url
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: legal-postgres-credentials
+              key: uri
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: evidence-storage
+          mountPath: /evidence-cache
+      volumes:
+      - name: evidence-storage
+        persistentVolumeClaim:
+          claimName: evidence-storage-pvc
+
+---
+# Timeline Analytics Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timeline-analytics
+  namespace: legal-case-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: timeline-analytics
+  template:
+    metadata:
+      labels:
+        app: timeline-analytics
+    spec:
+      containers:
+      - name: timeline-analytics
+        image: chitty-stacks/timeline-analytics:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: legal-postgres-credentials
+              key: uri
+        - name: VECTOR_STORE_PRIMARY
+          value: "your-vector-store-id"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-credentials
+              key: api-key
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+# Deadline Management CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: deadline-checker
+  namespace: legal-case-management
+spec:
+  schedule: "0 */6 * * *" # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: deadline-checker
+            image: chitty-stacks/deadline-checker:latest
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: legal-postgres-credentials
+                  key: uri
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-service:3000"
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "200m"
+          restartPolicy: OnFailure
+
+---
+# Compliance Audit CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-auditor
+  namespace: legal-case-management
+spec:
+  schedule: "0 2 * * 0" # Weekly on Sunday at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: compliance-auditor
+            image: chitty-stacks/compliance-auditor:latest
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: legal-postgres-credentials
+                  key: uri
+            - name: COOK_COUNTY_RULES_URL
+              value: "https://www.cookcountyclerkofcourt.org"
+            - name: AUDIT_REPORTS_BUCKET
+              value: "s3://chitty-compliance-reports"
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "200m"
+              limits:
+                memory: "1Gi"
+                cpu: "400m"
+          restartPolicy: OnFailure
+
+---
+# Load Balancer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: legal-api-service
+  namespace: legal-case-management
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app: legal-api
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: legal-redis
+  namespace: legal-case-management
+spec:
+  selector:
+    app: legal-redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+
+---
+# Persistent Volume for Evidence Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: evidence-storage-pvc
+  namespace: legal-case-management
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: efs-storage
+
+---
+# ConfigMap for Redis
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: legal-case-management
+data:
+  redis.conf: |
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+    timeout 300
+    tcp-keepalive 60
+    save 900 1
+    save 300 10
+    save 60 10000
+
+---
+# Secrets (template - populate with actual values)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: legal-postgres-credentials
+  namespace: legal-case-management
+type: Opaque
+stringData:
+  username: legal_user
+  password: # POPULATE_FROM_1PASSWORD
+  database: legal_case_management
+  uri: # POPULATE_FROM_1PASSWORD
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-credentials
+  namespace: legal-case-management
+type: Opaque
+stringData:
+  api-key: # POPULATE_FROM_1PASSWORD
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: clerk-credentials
+  namespace: legal-case-management
+type: Opaque
+stringData:
+  secret-key: # POPULATE_FROM_1PASSWORD
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: blockchain-credentials
+  namespace: legal-case-management
+type: Opaque
+stringData:
+  rpc-url: # POPULATE_FROM_1PASSWORD
+  private-key: # POPULATE_FROM_1PASSWORD
+
+---
+# Monitoring with Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: legal-api-monitor
+  namespace: legal-case-management
+spec:
+  selector:
+    matchLabels:
+      app: legal-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: legal-api-hpa
+  namespace: legal-case-management
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: legal-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Network Policy for Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: legal-api-network-policy
+  namespace: legal-case-management
+spec:
+  podSelector:
+    matchLabels:
+      app: legal-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+  - to:
+    - podSelector:
+        matchLabels:
+          app: legal-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: legal-redis
+    ports:
+    - protocol: TCP
+      port: 6379

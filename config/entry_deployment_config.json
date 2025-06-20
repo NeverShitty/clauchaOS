@@ -1,0 +1,357 @@
+{
+  "name": "chitty-entry-element",
+  "version": "1.0.0",
+  "description": "YourCompany ENTRY Element - Smart access control with state persistence",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "deploy": "npm run build && npm start"
+  },
+  "keywords": [
+    "chitty-stacks",
+    "smart-locks",
+    "access-control",
+    "property-management",
+    "cook-county",
+    "never-shitty"
+  ],
+  "author": "IT CAN BE LLC",
+  "license": "Proprietary",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.7.0",
+    "dotenv": "^16.0.3",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/cors": "^2.8.13",
+    "@types/node": "^20.1.0",
+    "typescript": "^5.0.4",
+    "ts-node-dev": "^2.0.0",
+    "eslint": "^8.40.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.2",
+    "@typescript-eslint/parser": "^5.59.2",
+    "jest": "^29.5.0",
+    "@types/jest": "^29.5.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NeverShitty/chitty-entry.git"
+  },
+  "railway": {
+    "build": {
+      "command": "npm run build"
+    },
+    "start": {
+      "command": "npm start"
+    },
+    "healthcheck": {
+      "path": "/health",
+      "timeout": 30
+    }
+  }
+}
+
+// ============================================================================
+// RAILWAY.JSON CONFIGURATION
+// ============================================================================
+
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm ci && npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm start",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "${{ PORT }}",
+        "RAILWAY_ENVIRONMENT": "production"
+      }
+    },
+    "staging": {
+      "variables": {
+        "NODE_ENV": "staging",
+        "PORT": "${{ PORT }}",
+        "RAILWAY_ENVIRONMENT": "staging"
+      }
+    }
+  }
+}
+
+// ============================================================================
+// DOCKERFILE (Alternative deployment option)
+// ============================================================================
+
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Build TypeScript
+RUN npm run build
+
+# Create state persistence directory
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Start server
+CMD ["npm", "start"]
+
+// ============================================================================
+// TYPESCRIPT CONFIGURATION
+// ============================================================================
+
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}
+
+// ============================================================================
+// ENVIRONMENT VARIABLES (.env template)
+// ============================================================================
+
+# Server Configuration
+NODE_ENV=production
+PORT=3000
+
+# Security
+ALLOWED_ORIGINS=https://your-domain.com,https://www.your-domain.com
+
+# Smart Lock API Keys (add your actual keys)
+AUGUST_API_KEY=your_august_api_key_here
+YALE_API_KEY=your_yale_api_key_here
+SCHLAGE_API_KEY=your_schlage_api_key_here
+KWIKSET_API_KEY=your_kwikset_api_key_here
+
+# Railway Persistent Storage
+RAILWAY_VOLUME_MOUNT_PATH=/app/data
+
+# Your County Compliance
+JURISDICTION=cook_county_illinois
+AUDIT_LEVEL=forensic
+EVIDENCE_RETENTION_DAYS=2555  # 7 years
+
+# Monitoring & Alerts
+ALERT_WEBHOOK_URL=your_webhook_url
+CRITICAL_ALERT_EMAIL=alerts@your-domain.com
+
+// ============================================================================
+// NIXPACKS CONFIGURATION
+// ============================================================================
+
+[phases.setup]
+nixPkgs = ['nodejs-18_x', 'npm']
+
+[phases.build]
+cmds = ['npm ci', 'npm run build']
+
+[phases.start]
+cmd = 'npm start'
+
+[variables]
+NODE_ENV = 'production'
+
+// ============================================================================
+// QUICK DEPLOYMENT SCRIPT
+// ============================================================================
+
+#!/bin/bash
+# deploy-entry.sh - One-click deployment to Railway
+
+echo "🚀 Deploying ENTRY Element to Railway..."
+
+# Install Railway CLI if not present
+if ! command -v railway &> /dev/null; then
+    echo "📦 Installing Railway CLI..."
+    npm install -g @railway/cli
+fi
+
+# Login to Railway
+echo "🔐 Railway login..."
+railway login
+
+# Create new project
+echo "🏗️ Creating Railway project..."
+railway create chitty-entry-element
+
+# Set environment variables
+echo "⚙️ Setting environment variables..."
+railway variables set NODE_ENV=production
+railway variables set JURISDICTION=cook_county_illinois
+railway variables set AUDIT_LEVEL=forensic
+
+# Deploy
+echo "🚢 Deploying..."
+railway up
+
+echo "✅ ENTRY Element deployed!"
+echo "🌐 Check your Railway dashboard for the deployment URL"
+echo "🔗 Test endpoint: [YOUR_URL]/health"
+
+// ============================================================================
+// TESTING SCRIPT
+// ============================================================================
+
+#!/bin/bash
+# test-entry.sh - Test the deployed ENTRY Element
+
+BASE_URL=${1:-"http://localhost:3000"}
+
+echo "🧪 Testing ENTRY Element at $BASE_URL"
+
+# Test health endpoint
+echo "1. Testing health check..."
+curl -s "$BASE_URL/health" | jq '.'
+
+# Test property setup
+echo "2. Testing property setup..."
+curl -s -X POST "$BASE_URL/api/setup/property" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "propertyId": "test_property_001",
+    "locks": [
+      {
+        "lockId": "test_lock_001",
+        "type": "generic"
+      }
+    ]
+  }' | jq '.'
+
+# Test permission grant
+echo "3. Testing permission grant..."
+curl -s -X POST "$BASE_URL/api/permission/grant" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "test_user_001",
+    "propertyId": "test_property_001",
+    "accessLevel": "guest",
+    "validFrom": "'$(date -d "now" -Iseconds)'",
+    "validUntil": "'$(date -d "+1 day" -Iseconds)'",
+    "grantedBy": "test_manager"
+  }' | jq '.'
+
+# Test access grant
+echo "4. Testing access grant..."
+curl -s -X POST "$BASE_URL/api/access/grant" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "test_user_001",
+    "propertyId": "test_property_001",
+    "accessType": "temporary",
+    "duration": 60,
+    "immediateAccess": true,
+    "purpose": "test_access"
+  }' | jq '.'
+
+echo "✅ Testing complete!"
+
+// ============================================================================
+// PRODUCTION CHECKLIST
+// ============================================================================
+
+# ENTRY Element Production Deployment Checklist
+
+## Pre-Deployment
+- [ ] Set all environment variables in Railway
+- [ ] Configure smart lock API keys
+- [ ] Set up persistent volume for state storage
+- [ ] Configure custom domain (optional)
+- [ ] Set up monitoring/alerts
+
+## Security
+- [ ] HTTPS enabled (Railway handles this automatically)
+- [ ] Rate limiting configured
+- [ ] CORS properly configured
+- [ ] Security headers enabled (Helmet)
+- [ ] Input validation in place
+
+## Your County Compliance
+- [ ] Forensic audit logging enabled
+- [ ] Evidence chain of custody working
+- [ ] 7-year data retention configured
+- [ ] Court-ready reporting functional
+
+## Testing
+- [ ] Health check endpoint responding
+- [ ] State persistence working after restart
+- [ ] Smart lock integration functional
+- [ ] Access grant/revoke working
+- [ ] Audit trail generation working
+
+## Monitoring
+- [ ] Railway health checks configured
+- [ ] Custom monitoring webhooks set up
+- [ ] Critical alert notifications working
+- [ ] Log aggregation configured
+
+## Documentation
+- [ ] API documentation updated
+- [ ] Deployment procedures documented
+- [ ] Emergency procedures defined
+- [ ] Contact information current
+
+🎯 Goal: 30-second recovery time from unexpected shutdown
+✅ Status: Production ready
+🏛️ Compliance: Your County Illinois
+⚡ Performance: Never Sh*tty™
