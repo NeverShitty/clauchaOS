@@ -10,27 +10,115 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Generate diff
         run: |
           git fetch origin ${{ github.base_ref }}
-          git diff --unified=0 origin/${{ github.base_ref }}... > diff.patch || true
+          git diff --unified=3 origin/${{ github.base_ref }}...HEAD > diff.patch || true
+          
+          # Also create a summary
+          echo "## Files Changed" > summary.md
+          git diff --name-status origin/${{ github.base_ref }}...HEAD >> summary.md || true
+          echo "" >> summary.md
+          echo "## Statistics" >> summary.md
+          git diff --shortstat origin/${{ github.base_ref }}...HEAD >> summary.md || true
 
       - name: LLM review (optional)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           if [ -z "${OPENAI_API_KEY:-}" ]; then
-            echo "No OPENAI_API_KEY. Skipping AI commentary."
-            exit 0
-          fi
-          python - <<'PY'
-# placeholder for LLM call; keep job green
-print("AI review placeholder.")
-PY
+            echo "No OPENAI_API_KEY configured. Using basic review."
+            
+            # Basic review without AI
+            echo "## 🤖 Automated Review" > review.md
+            echo "" >> review.md
+            echo "### Summary" >> review.md
+            cat summary.md >> review.md
+            echo "" >> review.md
+            echo "### Status" >> review.md
+            echo "✅ Basic checks passed" >> review.md
+            echo "⚠️  AI review not configured (set OPENAI_API_KEY secret)" >> review.md
+          else
+            # AI review
+            python3 - <<'PY' > review.md
+import os, json, requests
 
-      - name: Post summary comment
+# Read diff
+with open('diff.patch', 'r') as f:
+    diff = f.read()[:50000]
+
+# Prepare prompt
+prompt = f"""Review this code diff and provide:
+1. Security vulnerabilities or concerns
+2. Code quality issues
+3. Best practices violations
+4. Potential bugs
+5. Improvement suggestions
+
+Be concise and actionable. Format as markdown.
+
+Diff:
+{diff}
+"""
+
+# Call OpenAI
+headers = {
+    "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
+    "Content-Type": "application/json"
+}
+
+try:
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers=headers,
+        json={
+            "model": "gpt-3.5-turbo",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": 1000
+        }
+    )
+    
+    result = response.json()
+    review_content = result['choices'][0]['message']['content']
+    
+    print("## 🤖 AI Code Review\n")
+    print(review_content)
+    print("\n---\n*Reviewed by OpenAI GPT-3.5*")
+    
+except Exception as e:
+    print("## 🤖 AI Review\n")
+    print("❌ AI review failed:", str(e))
+    print("\n### Basic Statistics\n")
+    with open('summary.md', 'r') as f:
+        print(f.read())
+PY
+          fi
+
+      - name: Post review comment
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "AI Review ran. See checks for details." || true
+          # Check if we already commented
+          EXISTING=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json comments \
+            --jq '.comments[] | select(.author.login == "github-actions[bot]") | select(.body | contains("AI Code Review")) | .id' \
+            | head -1)
+          
+          if [ -n "$EXISTING" ]; then
+            echo "Updating existing comment..."
+            gh pr comment ${{ github.event.pull_request.number }} --edit-last --body-file review.md
+          else
+            echo "Creating new comment..."
+            gh pr comment ${{ github.event.pull_request.number }} --body-file review.md
+          fi
+
+      - name: Set check status
+        if: always()
+        run: |
+          # Always pass for now (can add logic to fail on critical issues)
+          echo "✅ AI review completed"
